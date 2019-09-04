@@ -27,7 +27,7 @@ public class Issue {
 	private Integer type;
 	private String tag;
 	private String key;
-	private HashMap<String, String> content;
+	private HashMap<String, Object> content;
 
 	public static final String ISSUE_REPORT_TYPE = "type";
 	public static final String ISSUE_REPORT_TAG = "tag";
@@ -42,11 +42,11 @@ public class Issue {
 		this.type = type;
 	}
 
-	public HashMap<String, String> getContent() {
+	public HashMap<String, Object> getContent() {
 		return content;
 	}
 
-	public void setContent(HashMap<String, String> content) {
+	public void setContent(HashMap<String, Object> content) {
 		this.content = content;
 	}
 

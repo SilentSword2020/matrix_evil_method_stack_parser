@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.Locale;
 
+import org.json.JSONObject;
+
 import com.google.gson.Gson;
 import com.matrix.parser.model.Issue;
 import com.matrix.parser.util.Util;
@@ -96,6 +98,26 @@ public class MethodIssueParser {
 	}
 
 	private ParserResult getParserResult(String issueJson) {
+
+		// 去掉content中 key: nameValuePairs，把内容放到content下
+		try {
+			String nameValueKey = "nameValuePairs";
+			if (issueJson != null && issueJson.contains(nameValueKey)) {
+				JSONObject issueObj = new JSONObject(issueJson);
+				String contentKey = "content";
+				JSONObject contentObj = issueObj != null ? issueObj.optJSONObject(contentKey) : null;
+				if (contentObj != null && contentObj.has(nameValueKey)) {
+					JSONObject nameValuePairs = contentObj.optJSONObject(nameValueKey);
+					if (nameValuePairs != null) {
+						issueObj.put(contentKey, nameValuePairs);
+						issueJson = issueObj.toString();
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
 		Issue issue = getIssue(issueJson);
 		if (issue == null) {
 			System.out.println("MethodIssueParser.getParserResult() issue is null");
@@ -106,11 +128,11 @@ public class MethodIssueParser {
 			initMethodMap();
 
 			// 开始解析相关的堆栈
-			HashMap<String, String> content = issue.getContent();
+			HashMap<String, Object> content = issue.getContent();
 
 			// stack
 			String stackKeyName = "stack";
-			String stack = content.get(stackKeyName);
+			String stack = String.valueOf(content.get(stackKeyName));
 			stack = parserStack(stack);
 			if (Util.isEmpty(stack)) {
 				stack = Constant.test_matrix_stack_not_found;
@@ -119,7 +141,7 @@ public class MethodIssueParser {
 
 			// stackKey
 			stackKeyName = "stackKey";
-			String stackKey = content.get(stackKeyName);
+			String stackKey = String.valueOf(content.get(stackKeyName));
 			String methodId = (Util.isEmpty(stackKey) || !stackKey.contains("|")) ? ""
 					: stackKey.substring(0, stackKey.indexOf('|'));
 			stackKey = methodMap.get(Util.getInt(methodId, MOTHOD_ID_INVILID));
@@ -133,9 +155,9 @@ public class MethodIssueParser {
 
 			//
 			ParserResult result = new ParserResult();
-			result.processName = content.get("process");
-			result.scene = getSceneStr(content.get("detail"));
-			result.costTime = content.get("cost");
+			result.processName = String.valueOf(content.get("process"));
+			result.scene = getSceneStr(String.valueOf(content.get("detail")));
+			result.costTime = String.valueOf(content.get("cost"));
 			result.costStackKey = stackKey;
 			result.stackDetail = stack;
 			result.result = getJsonStr(issue);
@@ -256,6 +278,31 @@ public class MethodIssueParser {
 		}
 		try {
 			return gson.fromJson(issueJson, Issue.class);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	/**
+	 * 获取issue
+	 *
+	 * @param issueJson
+	 * @return
+	 */
+	@SuppressWarnings("unchecked")
+	@Nullable
+	private HashMap<String, String> getContent(@NonNull String contentJson) {
+		if (Util.isEmpty(contentJson)) {
+			return null;
+		}
+		synchronized (this) {
+			if (gson == null) {
+				gson = Util.getGson();
+			}
+		}
+		try {
+			return gson.fromJson(contentJson, HashMap.class);
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
